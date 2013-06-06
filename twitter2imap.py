@@ -44,8 +44,8 @@ def getMsgCountInMailBox(imapapi, twitter_mailbox):
             print "Unable to get number of messages: invalid format"
             return -1
         
-        return int(re_result.group(1))
-
+        updates_cnt = int(re_result.group(1))
+    return updates_cnt
 ################################################################################
 def getLastTwitterID(imapapi, twitter_mailbox):
     TwitterID_header = "TwitterID: "
