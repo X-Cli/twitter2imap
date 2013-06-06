@@ -1,20 +1,21 @@
 twitter2imap
 ============
 ## What does this script?
-This python script fetches your Twitter timeline and store the tweets as
+This python script fetches your Twitter timeline and stores the tweets as
 individual emails (rfc822 messages) by using the IMAP(S) protocol.
 
 Storing tweets as emails makes sense because you can read them offline (once
 retrieved), search in your timeline with all of the criteria that are available
-in your email client, and helps to keep your privacy (you do not need to tell
-Twitter which tweets are your favorites, nor which links you click on...).
+in your email client, and it helps to keep your privacy (you do not need to tell
+Twitter which tweets you want to forward to a friend or are your favorites, nor
+which links you click on...).
 
 Hashtags are extracted and added to the email subject.
 
 Short links are extended (if possible). This helps keeping your privacy because
 all links are extended, and Twitter cannot learn which links you actually
-visit. This also helps to remain resilient, by eliminating the need of the URL
-shortener resolution service in the future.
+visit. This also helps to improve resiliency by eliminating the need of the URL
+shortener resolution service, once the tweet is fetched.
 
 If the destination mailbox does not exist or is empty, the script downloads the 100 most recent tweets of your TL.
 
