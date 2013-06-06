@@ -53,8 +53,9 @@ twitter_mailbox = "Twitter"
 ## Some dependancies?
 
 This python script makes use of the following (uncommon?) libraries:
-python-twitter (which makes use of python-oauth2)
+python-twitter (version 0.8.5) (which makes use of python-oauth2)
 python-imaplib
 
 Use your favorite search engine to get them.
 
+Python-Twitter-1.0 is not yet supported... It got updated in the meantime...
