@@ -35,9 +35,9 @@ def resolv_a_short_link(link):
 
         try:
             if protocol == "http://":
-                conn = httplib.HTTPConnection(domain, port)
+                conn = httplib.HTTPConnection(domain, port, timeout=5)
             else:
-                conn = httplib.HTTPSConnection(domain, port)
+                conn = httplib.HTTPSConnection(domain, port, timeout=5)
                 
             conn.request("HEAD", path)
             resp = conn.getresponse()
@@ -121,7 +121,6 @@ def getLastTwitterID(imapapi, twitter_mailbox):
         if twitter_since_id == 0:
             print "Unable to find the Twitter ID in the last messages; " + \
                 "martian msg in Twitter mailbox"
-            return -1    
     else:
         twitter_since_id = 0
     
@@ -135,10 +134,17 @@ def fetchTweets(twiapi, twitter_since_id, max_fetched_tweets):
         countLimit = max(1, min(max_fetched_tweets, 200))
 
     dict_tweets = {}
+    lastest_id = 0
 
     if twitter_since_id == 0:
         tweets = twiapi.GetHomeTimeline(count=countLimit, include_entities=True)
         for tweet in tweets:
+            try:
+                tweet_id = int(tweet.GetId())
+                if lastest_id < tweet_id:
+                    lastest_id = tweet_id
+            except ValueError:
+                continue
             dict_tweets[tweet.GetId()]=tweet
     else:
         smallest_id = 0
@@ -149,13 +155,17 @@ def fetchTweets(twiapi, twitter_since_id, max_fetched_tweets):
         for tweet in some_tweets:
             try:
                 tweet_id = int(tweet.GetId())
+
                 if smallest_id == 0 or smallest_id > tweet_id:
                     smallest_id = tweet_id
+
+                if lastest_id < tweet_id:
+                    lastest_id = tweet_id
+
                 dict_tweets[tweet_id]=tweet
-            except:
-                #Invalid ID (not a number)
-                print "ID not a number! Got: " + tweet_id
-        
+            except ValueError:
+                continue
+
         while len(some_tweets) > 1:
             #Some throttling to avoid hassling twitter's servers
             time.sleep(5)
@@ -170,13 +180,16 @@ def fetchTweets(twiapi, twitter_since_id, max_fetched_tweets):
                     tweet_id = int(tweet.GetId())
                     if not dict_tweets.has_key(tweet_id):
                         if smallest_id > tweet_id:
-                            smallest_id = tweet_id
+                            smallest_id = tweet_id 
+
+                        if lastest_id < tweet_id:
+                            lastest_id = tweet_id
+
                         dict_tweets[tweet_id]=tweet
                 except ValueError:
-                    #Invalid ID (not a number)
-                    print "ID not a number! Got: " + tweet_id
+                    continue
 
-    return dict_tweets
+    return (dict_tweets, lastest_id)
 ################################################################################
 def shutdown(imapapi, exitval):
     imapapi.logout()
@@ -305,10 +318,6 @@ if __name__ == "__main__":
         parser.add_argument('-c', help='Config file (e.g. twitter2imap.ini)', dest='config_file', 
             default="twitter2imap.ini") 
 
-        if sys.argv[1] == "-h" or sys.argv[1] == "--help":
-            parser.print_help()
-            sys.exit(0)
-        
         args = parser.parse_args()
 
         config = ConfigParser.ConfigParser()
@@ -405,6 +414,15 @@ if __name__ == "__main__":
             except ConfigParser.NoOptionError:
                 myEmailAddress = ""
 
+            try:
+                twitter_since_id_str = config.get("Twitter2IMAP", "Tweet ID")
+                twitter_since_id = int(twitter_since_id_str)
+            except ValueError:
+                print "Invalid Tweet ID: " + twitter_since_id
+                sys.exit(1)
+            except ConfigParser.NoOptionError:
+                twitter_since_id = 0
+
         except ConfigParser.NoSectionError:
             print "Missing Twitter2IMAP section in config file."
             sys.exit(1)
@@ -437,16 +455,21 @@ if __name__ == "__main__":
         shutdown(imapapi, 1)
 
     # What is the ID of the last fetched update ?
-    twitter_since_id = getLastTwitterID(imapapi, twitter_mailbox)
-
-    if twitter_since_id == -1:
-        shutdown(imapapi, 1)
+    if twitter_since_id == 0:
+        twitter_since_id = getLastTwitterID(imapapi, twitter_mailbox)
 
     #Fetches Twitter Timeline
-    new_tweets = fetchTweets(twiapi, twitter_since_id, max_fetched_tweets)
+    (new_tweets, lastest_id) = fetchTweets(twiapi, twitter_since_id, max_fetched_tweets)
 
     if len(new_tweets) == 0:
-        shutdown(imapapi, 1)
+        shutdown(imapapi, 0)
+
+    #Save the lastest id
+    config.set("Twitter2IMAP", "Tweet ID", str(lastest_id))
+    try:
+        config.write(open(args.config_file, "w"))
+    except IOError:
+        print "Unable to write config file"
 
     #Save tweets to IMAP
     saveTweetsToImap(imapapi, twitter_mailbox, new_tweets,
