@@ -157,9 +157,6 @@ def fetchTweets(twiapi, twitter_since_id, max_fetched_tweets):
                 print "ID not a number! Got: " + tweet_id
         
         while len(some_tweets) > 1:
-            print "Fetching from " + str(twitter_since_id) 
-            print  " to " + str(smallest_id)
-
             #Some throttling to avoid hassling twitter's servers
             time.sleep(5)
   
