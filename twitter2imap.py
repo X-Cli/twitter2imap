@@ -272,6 +272,9 @@ def saveTweetsToImap(imapapi, twitter_mailbox, new_tweets, myEmailAddress, reply
         #Extends short links
         (email_text, links_text) = resolv_short_links(email_text, tweet)
 
+        #Part of tweet's text as subject
+        subject = h.unescape(email_text)[0:70] + '.. '
+
         #Build security token for retweets and replies
         securityTokenConstructor = hmac.new(secret);
         securityTokenConstructor.update(tweet_id)
@@ -284,13 +287,13 @@ def saveTweetsToImap(imapapi, twitter_mailbox, new_tweets, myEmailAddress, reply
                 "Subject: " + preventHeaderInjection(subject) + "\n" + \
                 "Content-Type: text/plain\n" + \
                 "Content-Encoding: utf-8\n" + \
+                "SecurityToken: " + securityToken + "\n" + \
                 "TwitterID: " + preventHeaderInjection(tweet_id) + "\n" + \
                 "\n" + \
                 h.unescape(email_text) + "\n" + \
                 "\n\n\n\n\n\n\n" + \
                 links_text + \
                 "---------------------------------------------------\n" + \
-                "SecurityToken=" + securityToken + "\n" + \
                 "Twitter link= https://twitter.com/" + author_screenname + \
                     "/status/" + tweet_id + "\n"
 
