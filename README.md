@@ -1,6 +1,6 @@
 twitter2imap
 ============
-## What does this script?
+## What does this script do?
 This python script fetches your Twitter timeline and stores the tweets as
 individual emails (rfc822 messages) by using the IMAP(S) protocol.
 
@@ -35,7 +35,7 @@ To use this script, you need to create an "app" on dev.twitter.com
 
 You must then copy the twitter2imap.ini.tmpl file for instance to twitter2imap.ini and fills the blanks
 
-## Some dependancies?
+## Some dependencies?
 Python 2.7 is required.
 
 This python script makes use of the following (uncommon?) libraries:
@@ -43,4 +43,4 @@ python-twitter (version 1.0)
 python-imaplib
 python-argparse
 
-Use your favorite search engine to get them (and install them with python setup.py {build,install} to get their dependancies as well)
+Use your favorite search engine to get them (and install them with python setup.py {build,install} to get their dependencies as well)
