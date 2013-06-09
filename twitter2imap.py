@@ -12,6 +12,7 @@ import httplib
 import HTMLParser
 import argparse
 import ConfigParser
+import quopri
 
 ################################################################################
 #TODO Cannot currently handle links in the form protocol://domainname:port/somepath
@@ -253,7 +254,7 @@ def extract_hashtags(tweet):
 def preventHeaderInjection(some_text):
     return some_text.replace("\n", "").replace("\r", "")
 ################################################################################
-def saveTweetsToImap(imapapi, twitter_mailbox, new_tweets, myEmailAddress, replyBot, secret):
+def saveTweetsToImap(imapapi, twitter_mailbox, new_tweets, myEmailAddress, replyBot, secret, add_excerpt_in_subject):
     #Instanciate an HTML parser to unescape the tweet text (since we generate a text/plain, this should be safe
     h = HTMLParser.HTMLParser()
 
@@ -267,10 +268,24 @@ def saveTweetsToImap(imapapi, twitter_mailbox, new_tweets, myEmailAddress, reply
         author_screenname = author.GetScreenName()
 
         #Extract hashtags
-        subject += extract_hashtags(tweet)
+        subject_hashtags_suffix = extract_hashtags(tweet)
 
         #Extends short links
         (email_text, links_text) = resolv_short_links(email_text, tweet)
+
+        #Add tweet excerpt in subject (or not)
+        if add_excerpt_in_subject:
+            subject_excerpt_suffix = " -- " + tweet.GetText()[0:70] 
+            if len(subject_excerpt_suffix) >= 74:
+                subject_excerpt_suffix += "..."
+        else:
+            subject_excerpt_suffix=""
+
+        #merge subject elements and encode it appropriately
+        subject = preventHeaderInjection(subject + subject_hashtags_suffix + subject_excerpt_suffix)
+        quoted_subject = quopri.encodestring(subject.encode('utf-8', 'replace'), quotetabs=True)
+        quoted_subject = quoted_subject.replace("=\n", "").replace("?", "=3F")
+        encoded_subject = "=?utf-8?Q?" + quoted_subject + "?="
 
         #Build security token for retweets and replies
         securityTokenConstructor = hmac.new(secret);
@@ -281,7 +296,7 @@ def saveTweetsToImap(imapapi, twitter_mailbox, new_tweets, myEmailAddress, reply
                 "To: <" + myEmailAddress + ">\n" + \
                 "Date: " + time.strftime("%a, %d %b %Y %H:%M:%S +0000", 
                            time.gmtime(tweet.GetCreatedAtInSeconds())) + "\n" + \
-                "Subject: " + preventHeaderInjection(subject) + "\n" + \
+                "Subject: " + preventHeaderInjection(encoded_subject) + "\n" + \
                 "Content-Type: text/plain\n" + \
                 "Content-Encoding: utf-8\n" + \
                 "TwitterID: " + preventHeaderInjection(tweet_id) + "\n" + \
@@ -422,6 +437,15 @@ if __name__ == "__main__":
             except ConfigParser.NoOptionError:
                 twitter_since_id = 0
 
+            try:
+                add_excerpt_in_subject = config.get("Twitter2IMAP", "Excerpt in Subject").lower()
+                if add_excerpt_in_subject.startswith("y") or add_excerpt_in_subject.startswith("t"):
+                    add_excerpt_in_subject = True
+                else:
+                    add_excerpt_in_subject = False
+            except ConfigParser.NoOptionError:
+                add_excerpt_in_subject = False
+
         except ConfigParser.NoSectionError:
             print "Missing Twitter2IMAP section in config file."
             sys.exit(1)
@@ -473,7 +497,8 @@ if __name__ == "__main__":
     #Save tweets to IMAP
     saveTweetsToImap(imapapi, twitter_mailbox, new_tweets,
         myEmailAddress, reply_bot_address, 
-        hashlib.sha256(consumer_key + consumer_secret).hexdigest())
+        hashlib.sha256(consumer_key + consumer_secret).hexdigest(),
+        add_excerpt_in_subject)
 
     shutdown(imapapi, 0)
 
