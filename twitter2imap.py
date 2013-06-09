@@ -1,4 +1,4 @@
-#!/opt/local/bin/python2.7
+#!/usr/bin/env python
 
 import sys
 import os
@@ -290,7 +290,6 @@ def saveTweetsToImap(imapapi, twitter_mailbox, new_tweets, myEmailAddress, reply
                 "\n\n\n\n\n\n\n" + \
                 links_text + \
                 "---------------------------------------------------\n" + \
-                "ID=" + tweet_id + "\n" + \
                 "SecurityToken=" + securityToken + "\n" + \
                 "Twitter link= https://twitter.com/" + author_screenname + \
                     "/status/" + tweet_id + "\n"
