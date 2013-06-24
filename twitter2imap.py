@@ -13,6 +13,7 @@ import HTMLParser
 import argparse
 import ConfigParser
 import quopri
+import ssl
 
 ################################################################################
 #TODO Cannot currently handle links in the form protocol://domainname:port/somepath
@@ -356,17 +357,13 @@ if __name__ == "__main__":
         try:
             try:
                 default_use_tls = True
-                use_tls = config.get("IMAP", "Use TLS").lower()
-                if use_tls == "":
-                    use_tls = default_use_tls
-                elif use_tls[0:1] == "t" or use_tls[0:1] == "y":
-                    use_tls = True
-                else:
-                    use_tls = False
+                use_tls = config.getboolean("IMAP", "Use TLS")
             except ConfigParser.NoOptionError:
                 use_tls = default_use_tls
                 print  "Warning: the IMAP section does not have a Use TLS option. " + \
                     "Defaulting to Use TLS=" + str(default_use_tls)
+            except ValueError:
+                use_tls = default_use_tls
 
             try:
                 default_imap_host = "127.0.0.1"
@@ -379,9 +376,7 @@ if __name__ == "__main__":
                     "Defaulting to "+ default_imap_host
 
             try:
-                imap_port = config.get("IMAP", "Port")
-                imap_port=int(imap_port)
-
+                imap_port = config.getint("IMAP", "Port")
             except ValueError:
                 print "Error: the IMAP port number is invalid."
                 sys.exit(1)
@@ -407,16 +402,15 @@ if __name__ == "__main__":
             if twitter_mailbox == "":
                 twitter_mailbox = "Twitter"
 
-            max_fetched_tweets = config.get("Twitter2IMAP", "Max Fetched")
-            if max_fetched_tweets=="":
+            try:
+                max_fetched_tweets = config.getint("Twitter2IMAP", "Max Fetched")
+            except ConfigParser.NoOptionError:
                 max_fetched_tweets = 200
-            else:
-                try:
-                    max_fetched_tweets = int(max_fetched_tweets)
-                except ValueError:
-                    max_fetched_tweets = 200
-                    print "Error: Max Fetch value is invalid. Defaulting to " + \
-                        str(max_fetched_tweets)
+                print "Error: Max Fetch value is invalid. Defaulting to " + \
+                    str(max_fetched_tweets)
+            except ValueError:
+                print "Error: Max Fetch value is not an integer."
+                sys.exit(1)
 
             try:
                 reply_bot_address = config.get("Twitter2IMAP", "Bot Email Address")
@@ -429,8 +423,7 @@ if __name__ == "__main__":
                 myEmailAddress = ""
 
             try:
-                twitter_since_id_str = config.get("Twitter2IMAP", "Tweet ID")
-                twitter_since_id = int(twitter_since_id_str)
+                twitter_since_id_str = config.getint("Twitter2IMAP", "Tweet ID")
             except ValueError:
                 print "Invalid Tweet ID: " + twitter_since_id
                 sys.exit(1)
@@ -438,13 +431,17 @@ if __name__ == "__main__":
                 twitter_since_id = 0
 
             try:
-                add_excerpt_in_subject = config.get("Twitter2IMAP", "Excerpt in Subject").lower()
-                if add_excerpt_in_subject.startswith("y") or add_excerpt_in_subject.startswith("t"):
-                    add_excerpt_in_subject = True
-                else:
-                    add_excerpt_in_subject = False
+                add_excerpt_in_subject = config.getboolean("Twitter2IMAP", "Excerpt in Subject")
             except ConfigParser.NoOptionError:
                 add_excerpt_in_subject = False
+            except ValueError:
+                print "Excerpt in Subject is not a valid boolean"
+                sys.exit(1)
+
+            try:
+                ca_certs = config.get("Twitter2IMAP", "CAcerts")
+            except ConfigParser.NoOptionError:
+                ca_certs = None
 
         except ConfigParser.NoSectionError:
             print "Missing Twitter2IMAP section in config file."
@@ -463,7 +460,7 @@ if __name__ == "__main__":
                           )
 
     if use_tls :
-        imapapi = imaplib.IMAP4_SSL(host=imap_host, port=imap_port)
+        imapapi = imaplib.IMAP4_SSL_CHECK(host=imap_host, port=imap_port, ca_certs=ca_certs)
     else:
         imapapi = imaplib.IMAP4(host=imap_host, port=imap_port)
       
