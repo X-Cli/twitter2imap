@@ -423,7 +423,7 @@ if __name__ == "__main__":
                 myEmailAddress = ""
 
             try:
-                twitter_since_id_str = config.getint("Twitter2IMAP", "Tweet ID")
+                twitter_since_id = config.getint("Twitter2IMAP", "Tweet ID")
             except ValueError:
                 print "Invalid Tweet ID: " + twitter_since_id
                 sys.exit(1)
